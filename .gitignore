@@ -1,0 +1,30 @@
+Rust
+target/
+pkg/
+
+# Node/Vue
+node_modules/
+dist/
+.wasm-pack-cache/
+
+# OS/IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# WASM output in Vue
+src/wasm/*.wasm
+src/wasm/*.js
+
+# Vendor
+vendor
+
+# Fonts
+public/fonts
+
+# PDF
+*.pdf
+
+# Wasm
+src/wasm
