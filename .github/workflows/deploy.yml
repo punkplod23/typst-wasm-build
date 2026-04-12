@@ -35,6 +35,10 @@ jobs:
 
       - name: Prepare Assets & Manifest 🛠️
         run: |
+          # Ensure the target directories exist to avoid ENOENT errors
+          mkdir -p tests/vue/public/vendor
+          mkdir -p tests/vue/public/fonts
+
           # Copy the WASM binary to public so the browser can fetch it
           cp pkg/my_typst_wasm_bg.wasm tests/vue/public/
           

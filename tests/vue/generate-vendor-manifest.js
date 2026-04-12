@@ -8,6 +8,11 @@ const manifestPath = path.join(import.meta.dirname, 'public', 'vendor-manifest.j
 // Recursively get all files
 function getAllFiles(dir) {
   let files = [];
+  
+  if (!fs.existsSync(dir)) {
+    return files;
+  }
+
   const items = fs.readdirSync(dir);
   
   for (const item of items) {
