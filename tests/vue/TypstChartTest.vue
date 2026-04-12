@@ -52,7 +52,7 @@ export default {
 
       try {
         // Fetch the WASM binary
-        const response = await fetch('/my_typst_wasm_bg.wasm');
+        const response = await fetch('my_typst_wasm_bg.wasm');
         const wasmBuffer = await response.arrayBuffer();
 
         // Initialize WASM
@@ -79,7 +79,7 @@ export default {
         
         for (const fontFile of fonts) {
           try {
-            const fontResponse = await fetch(`/fonts/${fontFile}`);
+            const fontResponse = await fetch(`fonts/${fontFile}`);
             if (fontResponse.ok) {
               const fontBuffer = await fontResponse.arrayBuffer();
               add_font(new Uint8Array(fontBuffer));

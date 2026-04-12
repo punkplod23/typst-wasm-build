@@ -1,9 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Paths
-const vendorDir = path.join(__dirname, 'public', 'vendor');
-const manifestPath = path.join(__dirname, 'public', 'vendor-manifest.json');
+const vendorDir = path.join(import.meta.dirname, 'public', 'vendor');
+const manifestPath = path.join(import.meta.dirname, 'public', 'vendor-manifest.json');
 
 // Recursively get all files
 function getAllFiles(dir) {

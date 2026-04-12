@@ -43,7 +43,7 @@ export default {
 
       try {
         // Fetch the WASM binary
-        const response = await fetch('/my_typst_wasm_bg.wasm');
+        const response = await fetch('my_typst_wasm_bg.wasm');
         const wasmBuffer = await response.arrayBuffer();
 
         // Initialize WASM
@@ -63,7 +63,7 @@ export default {
 
     async loadFont() {
       try {
-        const fontResponse = await fetch('/fonts/Roboto-Regular.ttf');
+        const fontResponse = await fetch('fonts/Roboto-Regular.ttf');
         const fontBuffer = await fontResponse.arrayBuffer();
         add_font(new Uint8Array(fontBuffer));
         this.status = '🔡 Font loaded successfully';
