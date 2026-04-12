@@ -28,3 +28,8 @@ public/fonts
 
 # Wasm
 src/wasm
+
+# Vue
+tests/vue/node_modules/
+tests/vue/public/
+tests/vue/public-generated/
