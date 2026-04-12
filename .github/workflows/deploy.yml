@@ -42,17 +42,13 @@ jobs:
 
       - name: Prepare Assets & Manifest 🛠️
         run: |
-          # Ensure the target directories exist to avoid ENOENT errors
-          # These are needed because 'vendor' and 'public/fonts' are gitignored
-          # and thus not present in the checkout.
+          # Ensure the target directories exist within the Vue project
           mkdir -p tests/vue/public/vendor
           mkdir -p tests/vue/public/fonts
 
           # Copy vendor packages and fonts into the public directory for the Vue app
           cp -r vendor/* tests/vue/public/vendor/ || true # '|| true' to prevent error if vendor is empty
           cp -r public/fonts/* tests/vue/public/fonts/ || true # '|| true' to prevent error if fonts is empty
-          mkdir -p tests/vue/public/vendor
-          mkdir -p tests/vue/public/fonts
 
           # Create .nojekyll to ensure _bg.wasm files are served
           touch tests/vue/public/.nojekyll
