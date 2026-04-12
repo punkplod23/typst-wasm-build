@@ -35,8 +35,8 @@ for (const filePath of allFiles) {
   // Normalize path to use forward slashes
   const normalizedPath = relativePath.replace(/\\/g, '/');
   
-  // Create vfsPath: /packages/preview/{package}/{version}/{file}
-  const vfsPath = '/packages/preview/' + normalizedPath;
+  // Create vfsPath: preview/{package}/{version}/{file}
+  const vfsPath = 'preview/' + normalizedPath;
   
   // Create filePath: vendor/{package}/{version}/{file}
   const filePathValue = 'vendor/' + normalizedPath;

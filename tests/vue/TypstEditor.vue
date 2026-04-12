@@ -516,7 +516,7 @@ Typst WASM brings document creation to the web browser!`,
 
       try {
         // Fetch and initialize WASM
-        const response = await fetch('/my_typst_wasm_bg.wasm');
+        const response = await fetch('my_typst_wasm_bg.wasm');
         const wasmBuffer = await response.arrayBuffer();
         await init(wasmBuffer);
         
@@ -544,7 +544,7 @@ Typst WASM brings document creation to the web browser!`,
         
         for (const fontFile of fonts) {
           try {
-            const fontResponse = await fetch(`/fonts/${fontFile}`);
+            const fontResponse = await fetch(`fonts/${fontFile}`);
             if (fontResponse.ok) {
               const fontBuffer = await fontResponse.arrayBuffer();
               add_font(new Uint8Array(fontBuffer));
@@ -564,7 +564,7 @@ Typst WASM brings document creation to the web browser!`,
         console.log('📦 Loading vendor packages...');
         
         // Try to fetch vendor manifest
-        const vendorResponse = await fetch('/vendor-manifest.json');
+        const vendorResponse = await fetch('vendor-manifest.json');
         if (!vendorResponse.ok) {
           console.warn('Vendor packages not available');
           return;
@@ -578,7 +578,7 @@ Typst WASM brings document creation to the web browser!`,
         // First pass: load all files
         for (const [vfsPath, filePath] of Object.entries(manifest)) {
           try {
-            const fileResponse = await fetch(`/${filePath}`);
+            const fileResponse = await fetch(filePath);
             if (fileResponse.ok) {
               const buffer = await fileResponse.arrayBuffer();
               const isText = filePath.endsWith('.typ') || filePath.endsWith('.toml');
@@ -590,8 +590,8 @@ Typst WASM brings document creation to the web browser!`,
               contentCache.set(vfsPath, data);
               loadedCount++;
               
-              // Track files by package for special handling
-              const match = vfsPath.match(/^preview\/([^\/]+)\/([^\/]+)\/(.+)$/);
+              // Track files by package for special handling (regex updated to handle manifest)
+              const match = vfsPath.match(/^preview\/([^/]+)\/([^/]+)\/(.+)$/);
               if (match) {
                 const [, pkgName, version, relPath] = match;
                 if (!packageFiles[pkgName]) packageFiles[pkgName] = { version, files: {} };

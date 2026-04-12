@@ -1,0 +1,53 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Install Rust 🦀
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack 📦
+        uses: jetli/wasm-pack-action@v0.4.0
+
+      - name: Build WASM 🏗️
+        run: wasm-pack build --target web
+
+      - name: Setup Node 🟢
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vue Dependencies 📥
+        working-directory: ./tests/vue
+        run: npm install
+
+      - name: Prepare Assets & Manifest 🛠️
+        run: |
+          # Copy the WASM binary to public so the browser can fetch it
+          cp pkg/my_typst_wasm_bg.wasm tests/vue/public/
+          
+          # Generate the manifest for packages
+          cd tests/vue
+          node generate-vendor-manifest.js
+
+      - name: Build Vue App 🚀
+        working-directory: ./tests/vue
+        run: npm run build
+
+      - name: Deploy ✈️
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: tests/vue/dist
+          branch: gh-pages
