@@ -3,9 +3,6 @@
     <h1>Typst Live Editor</h1>
     
     <div class="controls">
-      <button @click="initializeWasm" :disabled="wasmLoaded">
-        {{ wasmLoaded ? '✅ WASM Loaded' : 'Load WASM' }}
-      </button>
       <button @click="compile" :disabled="!wasmLoaded">
         🎨 Compile
       </button>
@@ -567,6 +564,7 @@ Typst WASM brings document creation to the web browser!`,
         const vendorResponse = await fetch('vendor-manifest.json');
         if (!vendorResponse.ok) {
           console.warn('Vendor packages not available');
+          this.vendorLoaded = true; // Still allow compilation without vendor
           return;
         }
         
@@ -652,6 +650,7 @@ Typst WASM brings document creation to the web browser!`,
     loadTemplate() {
       this.typstCode = this.templates[this.selectedTemplate];
       this.pdfUrl = null;
+      this.compile();
     },
 
     compile() {
@@ -690,8 +689,10 @@ Typst WASM brings document creation to the web browser!`,
       }
     }
   },
-  mounted() {
+  async mounted() {
     this.typstCode = this.templates.simple;
+    // Automatically initialize so the user can just start typing
+    await this.initializeWasm();
   }
 };
 </script>
