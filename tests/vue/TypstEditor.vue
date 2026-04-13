@@ -510,10 +510,12 @@ Typst WASM brings document creation to the web browser!`,
     async initializeWasm() {
       this.status = '🚀 Loading WASM & Packages...';
       this.statusClass = 'loading';
+      
+      const baseUrl = import.meta.env.BASE_URL || './';
 
       try {
         // Fetch and initialize WASM
-        const response = await fetch('my_typst_wasm_bg.wasm');
+        const response = await fetch(`${baseUrl}my_typst_wasm_bg.wasm`);
         const wasmBuffer = await response.arrayBuffer();
         await init(wasmBuffer);
         
@@ -536,12 +538,13 @@ Typst WASM brings document creation to the web browser!`,
     },
 
     async loadFonts() {
+      const baseUrl = import.meta.env.BASE_URL || './';
       try {
         const fonts = ['Roboto-Regular.ttf', 'NewCMMath-Regular.otf'];
         
         for (const fontFile of fonts) {
           try {
-            const fontResponse = await fetch(`fonts/${fontFile}`);
+            const fontResponse = await fetch(`${baseUrl}fonts/${fontFile}`);
             if (fontResponse.ok) {
               const fontBuffer = await fontResponse.arrayBuffer();
               add_font(new Uint8Array(fontBuffer));
@@ -557,11 +560,12 @@ Typst WASM brings document creation to the web browser!`,
     },
 
     async loadVendorPackages() {
+      const baseUrl = import.meta.env.BASE_URL || './';
       try {
         console.log('📦 Loading vendor packages...');
         
         // Try to fetch vendor manifest
-        const vendorResponse = await fetch('vendor-manifest.json');
+        const vendorResponse = await fetch(`${baseUrl}vendor-manifest.json`);
         if (!vendorResponse.ok) {
           console.warn('Vendor packages not available');
           this.vendorLoaded = true; // Still allow compilation without vendor
@@ -576,7 +580,9 @@ Typst WASM brings document creation to the web browser!`,
         // First pass: load all files
         for (const [vfsPath, filePath] of Object.entries(manifest)) {
           try {
-            const fileResponse = await fetch(filePath);
+            // Ensure filePath is relative to base
+            const cleanFilePath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+            const fileResponse = await fetch(`${baseUrl}${cleanFilePath}`);
             if (fileResponse.ok) {
               const buffer = await fileResponse.arrayBuffer();
               const isText = filePath.endsWith('.typ') || filePath.endsWith('.toml');
