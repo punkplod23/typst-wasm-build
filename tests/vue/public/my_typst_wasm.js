@@ -22,6 +22,39 @@ export function add_font(data) {
 }
 
 /**
+ * High-level helper to register package files using Typst's package structure components.
+ * This prevents key mismatches for @preview packages.
+ * @param {string} namespace
+ * @param {string} name
+ * @param {string} version
+ * @param {string} rel_path
+ * @param {Uint8Array} data
+ */
+export function add_package_file(namespace, name, version, rel_path, data) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(namespace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(version, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passStringToWasm0(rel_path, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passArray8ToWasm0(data, wasm.__wbindgen_export);
+        const len4 = WASM_VECTOR_LEN;
+        wasm.add_package_file(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        if (r1) {
+            throw takeObject(r0);
+        }
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * @param {string} text
  * @returns {Uint8Array}
  */

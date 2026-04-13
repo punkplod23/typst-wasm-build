@@ -17,9 +17,6 @@ Thumbs.db
 src/wasm/*.wasm
 src/wasm/*.js
 
-# Vendor
-vendor
-
 # Fonts
 public/fonts
 

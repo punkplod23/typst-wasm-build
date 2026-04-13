@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Paths
-const vendorDir = path.join(import.meta.dirname, 'public', 'vendor');
-const manifestPath = path.join(import.meta.dirname, 'public', 'vendor-manifest.json');
+const vendorDir = path.join(__dirname, 'public', 'vendor');
+const manifestPath = path.join(__dirname, 'public', 'vendor-manifest.json');
 
 // Recursively get all files
 function getAllFiles(dir) {
@@ -40,10 +43,10 @@ for (const filePath of allFiles) {
   // Normalize path to use forward slashes
   const normalizedPath = relativePath.replace(/\\/g, '/');
   
-  // Create vfsPath: preview/{package}/{version}/{file}
-  const vfsPath = 'preview/' + normalizedPath;
+  // The normalizedPath already starts with 'preview/' based on the folder structure
+  const vfsPath = normalizedPath;
   
-  // Create filePath: vendor/{package}/{version}/{file}
+  // The relative path from the public folder
   const filePathValue = 'vendor/' + normalizedPath;
   
   manifest[vfsPath] = filePathValue;

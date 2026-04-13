@@ -131,4 +131,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Typst](https://typst.app/) for the typesetting system
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/) for WASM tooling
-- Typst community packages: [CeTZ](https://github.com/johannes-wolf/cetz), [CeTZ-Plot](https://github.com/johannes-wolf/cetz-plot), [Oxifmt](https://github.com/johannes-wolf/oxifmt)
+- Typst community packages: [CeTZ](https://github.com/johannes-wolf/cetz), [CeTZ-Plot](https://github.com/johannes-wolf/cetz-plot), [Oxifmt](https://github.com/johannes-wolf/oxifmt), [typst-based](https://github.com/EpicEricEE/typst-based?tab=MIT-1-ov-file)
+- **Fonts**:
+  - [Roboto](https://fonts.google.com/specimen/Roboto) by Christian Robertson (Apache License 2.0)
+  - [New Computer Modern Math](https://ctan.org/pkg/newcomputermodern) (GPL with Font Exception)

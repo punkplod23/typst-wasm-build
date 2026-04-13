@@ -33,7 +33,7 @@
 </template>
 
 <script>
-import init, { add_font, add_file, compile_to_pdf } from '../../pkg/my_typst_wasm.js';
+import init, { add_font, add_file, add_package_file, compile_to_pdf } from '../../pkg/my_typst_wasm.js';
 
 export default {
   name: 'TypstChartTest',
@@ -52,7 +52,8 @@ export default {
 
       try {
         // Fetch the WASM binary
-        const response = await fetch('my_typst_wasm_bg.wasm');
+        const baseUrl = import.meta.env.BASE_URL || './';
+        const response = await fetch(`${baseUrl}my_typst_wasm_bg.wasm`);
         const wasmBuffer = await response.arrayBuffer();
 
         // Initialize WASM
@@ -74,12 +75,13 @@ export default {
     },
 
     async loadFonts() {
+      const baseUrl = import.meta.env.BASE_URL || './';
       try {
         const fonts = ['Roboto-Regular.ttf', 'NewCMMath-Regular.otf'];
         
         for (const fontFile of fonts) {
           try {
-            const fontResponse = await fetch(`fonts/${fontFile}`);
+            const fontResponse = await fetch(`${baseUrl}fonts/${fontFile}`);
             if (fontResponse.ok) {
               const fontBuffer = await fontResponse.arrayBuffer();
               add_font(new Uint8Array(fontBuffer));
@@ -96,10 +98,72 @@ export default {
     },
 
     async loadChartPackages() {
-      // In a browser environment, we cannot directly access the file system
-      // The chart packages would need to be bundled or fetched from the server
-      // For now, we'll show a simplified chart compilation
-      this.status = '📦 Chart packages ready (server-side only)';
+      const baseUrl = import.meta.env.BASE_URL || './';
+      try {
+        const vendorResponse = await fetch(`${baseUrl}vendor-manifest.json`);
+        if (!vendorResponse.ok) return;
+        
+        const manifest = await vendorResponse.json();
+
+        // Group files by package (namespace/name/version)
+        const packageGroups = new Map();
+        for (const [vfsPath, filePath] of Object.entries(manifest)) {
+          // Matches namespace/name/version/path
+          const match = vfsPath.match(/^([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/);
+          if (match) {
+            const [, ns, name, ver, rel] = match;
+            const key = `${ns}/${name}/${ver}`;
+            if (!packageGroups.has(key)) packageGroups.set(key, []);
+            packageGroups.get(key).push({ ns, name, ver, rel, filePath });
+          }
+        }
+
+        // Process packages and discovery root prefix
+        for (const [pkgKey, files] of packageGroups.entries()) {
+          const [ns, name, ver] = pkgKey.split('/');
+          
+          let rootPrefix = "";
+          if (!files.some(f => f.rel === 'typst.toml')) {
+            const tomlFile = files.find(f => f.rel.endsWith('/typst.toml'));
+            if (tomlFile) rootPrefix = tomlFile.rel.replace('typst.toml', '');
+          }
+
+          const results = await Promise.allSettled(
+            files.filter(f => f.rel.startsWith(rootPrefix)).map(async (file) => {
+              const fetchPath = file.filePath.startsWith('vendor/') ? file.filePath : `vendor/${file.filePath}`;
+              const res = await fetch(`${baseUrl}${fetchPath}`);
+              if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+
+              const buffer = await res.arrayBuffer();
+              const finalRelPath = file.rel.slice(rootPrefix.length);
+              
+              const isText = finalRelPath.endsWith('.typ') || finalRelPath.endsWith('.toml');
+              const data = isText 
+                ? new TextEncoder().encode(new TextDecoder().decode(buffer))
+                : new Uint8Array(buffer);
+
+              add_package_file(ns, name, ver, finalRelPath, data);
+              return { path: finalRelPath, data };
+            })
+          );
+
+          const contentMap = new Map();
+          results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value) {
+              contentMap.set(result.value.path, result.value.data);
+            }
+          });
+
+          const wasmPlugin = contentMap.get('cetz_core.wasm') || contentMap.get('src/cetz_core.wasm');
+          if (name === 'cetz' && wasmPlugin) {
+            add_package_file(ns, name, ver, "cetz-core/cetz_core.wasm", wasmPlugin);
+          }
+        }
+
+        this.status = '📦 Chart packages loaded';
+      } catch (e) {
+        console.warn('Chart package loading failed:', e);
+      }
     },
 
     compileCharts() {
@@ -108,13 +172,14 @@ export default {
         this.statusClass = 'loading';
 
         const source = `
-// 1. Establish the font stack globally
+#import "@preview/cetz:0.4.2"
+#import "@preview/cetz-plot:0.1.3": chart
+
+// 1. Establish the font stack globally so 'measure' always has access to Math tables
 #set text(font: ("Roboto", "New Computer Modern Math"), size: 10pt)
 
+// 2. Force all math environments to use the specific math font
 #show math.equation: set text(font: "New Computer Modern Math")
-
-// Note: In browser environment, chart packages may not be available
-// This is a simplified demo. For full charts, use the Node.js test.
 
 #let project(title: "", authors: (), body) = {
   set document(author: authors, title: title)
@@ -141,12 +206,19 @@ export default {
 
 == Overview
 
-This is a simplified chart demo compiled in the browser.
+This is a full chart demo compiled in the browser using the new world-class loader.
 
-For full Cetz/Cetz-Plot support with bars, pies, and advanced charts,
-use the Node.js headless test:
-
-\`npm test\` from tests/vue directory.
+#align(center)[
+  #cetz.canvas({
+    let data = (("A", 10), ("B", 20), ("C", 15))
+    chart.barchart(
+      size: (10, 5),
+      data,
+      bar-width: 0.8,
+      fill: true,
+    )
+  })
+]
 
 === Benefits of Charts
 

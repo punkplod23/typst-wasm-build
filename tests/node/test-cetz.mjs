@@ -1,4 +1,4 @@
-import init, { add_font, add_file, compile_to_pdf } from '../../pkg/my_typst_wasm.js';
+import init, { add_font, add_file, add_package_file, compile_to_pdf } from '../../pkg/my_typst_wasm.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,29 +6,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function parseEntrypoint(rootPath) {
-    const tomlPath = path.join(rootPath, 'typst.toml');
-    if (!fs.existsSync(tomlPath)) return null;
-
-    const content = fs.readFileSync(tomlPath, 'utf8');
-    const match = content.match(/^\s*entrypoint\s*=\s*"([^"]+)"/m);
-    let entrypoint = match ? match[1] : null;
-    if (entrypoint && !fs.existsSync(path.join(rootPath, entrypoint))) {
-        if (fs.existsSync(path.join(rootPath, 'lib.typ'))) {
-            entrypoint = 'lib.typ';
-        } else {
-            entrypoint = null;
-        }
-    }
-    return entrypoint;
-}
-
 async function run() {
     const wasmBuffer = fs.readFileSync(path.join(__dirname, '../../pkg/my_typst_wasm_bg.wasm'));
     await init({ module_or_path: wasmBuffer });
 
     // Inside your run() function in test-cetz.mjs
-    const fonts = ['Roboto-Regular.ttf', 'NewCMMath-Regular.otf'];
+    const fonts = ['Roboto-Regular.ttf', 'NewCMMath-Regular.otf']
 
     fonts.forEach(fontFile => {
         const fontPath = path.join(__dirname, '../../public/fonts', fontFile);
@@ -38,6 +21,11 @@ async function run() {
         }
     });
     const vendorPath = path.join(__dirname, '../../vendor/preview');
+    if (!fs.existsSync(vendorPath)) {
+        console.error("❌ Vendor path missing. Run 'make vendor_setup' first.");
+        return;
+    }
+
     const packageNames = fs.readdirSync(vendorPath).filter(name => fs.statSync(path.join(vendorPath, name)).isDirectory());
 
     for (const name of packageNames) {
@@ -46,9 +34,20 @@ async function run() {
 
         for (const ver of versions) {
             const fullPkgPath = path.join(pkgDir, ver);
-            const entrypoint = parseEntrypoint(fullPkgPath);
-            const filesAdded = new Set();
             const contentByPath = new Map();
+
+            // Find the actual package root (the directory containing typst.toml)
+            let actualRoot = fullPkgPath;
+            if (!fs.existsSync(path.join(fullPkgPath, 'typst.toml'))) {
+                const subDirs = fs.readdirSync(fullPkgPath).filter(d => fs.statSync(path.join(fullPkgPath, d)).isDirectory());
+                for (const subDir of subDirs) {
+                    const subPath = path.join(fullPkgPath, subDir);
+                    if (fs.existsSync(path.join(subPath, 'typst.toml'))) {
+                        actualRoot = subPath;
+                        break;
+                    }
+                }
+            }
 
             const walk = (dir, rel) => {
                 fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
@@ -61,127 +60,73 @@ async function run() {
                     }
 
                     const raw = fs.readFileSync(subPath);
-                    const data = entry.name.endsWith('.typ')
+                    const data = (entry.name.endsWith('.typ') || entry.name.endsWith('.toml'))
                         ? new TextEncoder().encode(raw.toString('utf8'))
                         : new Uint8Array(raw);
 
-                    const vfsKey = `preview/${name}/${ver}/${vfsRel}`;
-                    add_file(vfsKey, data);
-                    filesAdded.add(vfsRel);
+                    // Use the Rust helper for guaranteed VFS key consistency
+                    add_package_file("preview", name, ver, vfsRel, data);
                     contentByPath.set(vfsRel, data);
                 });
             };
 
-            walk(fullPkgPath, '');
+            walk(actualRoot, '');
 
-            if (name === 'cetz-plot' && contentByPath.has('src/chart.typ')) {
-                add_file(`preview/${name}/${ver}/chart.typ`, contentByPath.get('src/chart.typ'));
-                add_file(`chart.typ`, contentByPath.get('src/chart.typ'));
-            }
-
-            // Also mount chart/ and src/ files in root for imports
-            if (name === 'cetz-plot') {
-                for (const [rel, content] of contentByPath) {
-                    if (rel.startsWith('chart/') || rel.startsWith('src/')) {
-                        let modifiedContent = content;
-                        if (rel.startsWith('chart/')) {
-                            // Fix imports in chart files
-                            const str = new TextDecoder().decode(content);
-                            modifiedContent = new TextEncoder().encode(str.replace(/#import "\/src\/cetz\.typ": .*\n/g, ''));
-                        }
-                        add_file(rel, modifiedContent);
-                    }
-                }
-                if (contentByPath.has('cetz.typ')) {
-                    add_file(`src/cetz.typ`, contentByPath.get('cetz.typ'));
-                    add_file(`cetz.typ`, contentByPath.get('cetz.typ'));
-                }
-            }
-
-            // For cetz, also mount src/ in root
-            if (name === 'cetz') {
-                for (const [rel, content] of contentByPath) {
-                    if (rel.startsWith('src/')) {
-                        add_file(rel, content);
-                    }
-                }
-            }
-
-            for (const rel of filesAdded) {
-                if (rel.startsWith('src/')) {
-                    const rootRel = rel.replace(/^src\//, '');
-                    if (!filesAdded.has(rootRel)) {
-                        add_file(`preview/${name}/${ver}/${rootRel}`, contentByPath.get(rel));
-                    }
-                } else {
-                    const srcRel = `src/${rel}`;
-                    if (!filesAdded.has(srcRel) && (rel.endsWith('.typ') || rel === 'typst.toml')) {
-                        add_file(`preview/${name}/${ver}/${srcRel}`, contentByPath.get(rel));
-                    }
-                }
-            }
-
-            if (name === 'cetz' && filesAdded.has('cetz_core.wasm') && !filesAdded.has('cetz-core/cetz_core.wasm')) {
-                add_file(`preview/${name}/${ver}/cetz-core/cetz_core.wasm`, contentByPath.get('cetz_core.wasm'));
-            }
-
-            if (entrypoint && filesAdded.has('lib.typ')) {
-                add_file(`preview/${name}/${ver}/${entrypoint}`, contentByPath.get('lib.typ'));
+            // CeTZ specific fix: The plugin must be at cetz-core/cetz_core.wasm 
+            // relative to the package root for CeTZ internal imports to find it.
+            const wasmPlugin = contentByPath.get('cetz_core.wasm') || contentByPath.get('src/cetz_core.wasm');
+            if (name === 'cetz' && wasmPlugin) {
+                add_package_file("preview", name, ver, "cetz-core/cetz_core.wasm", wasmPlugin);
             }
         }
     }
 
 const source = `
-// 1. Establish the font stack globally so 'measure' always has access to Math tables
-#set text(font: ("Roboto", "New Computer Modern Math"), size: 10pt)
-
-// 2. Force all math environments to use the specific math font
-#show math.equation: set text(font: "New Computer Modern Math")
-
+// Google Logo (Base64 encoded PNG)
+#import "@preview/based:0.1.0": base64
 #import "@preview/cetz:0.4.2"
-#import "@preview/cetz-plot:0.1.3": chart
+#import "@preview/cetz-plot:0.1.3": chart, plot
 
-#let project(title: "", authors: (), body) = {
-  set document(author: authors, title: title)
-  set page(paper: "us-letter", margin: 2cm)
-  
-  // Use the same stack here to prevent the template from breaking the math link
-  set text(font: ("Roboto", "New Computer Modern Math"), size: 11pt)
-  
-  align(center)[
-    #block(text(weight: 700, 1.75em, title))
-    #v(1em)
-    #grid(
-      columns: (1fr,) * calc.min(3, authors.len()),
-      column-gutter: 1em,
-      ..authors.map(author => align(center, strong(author)))
-    )
-  ]
-  v(2em)
-  body
-}
+#let google_logo_data = "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"
+#let raw-image = base64.decode(google_logo_data)
 
-#show: project.with(
-  title: "Quarterly Performance Report",
-  authors: ("Alex Rivers",),
+#let google-palette = (rgb("#4285F4"), rgb("#EA4335"), rgb("#FBBC05"), rgb("#34A853"))
+
+#set page(
+  paper: "a4",
+  margin: (x: 1in, y: 1.65in),
+  header: context {
+    let page_num = counter(page).get().first()
+    if page_num == 1 {
+      grid(
+        columns: (1fr, 1fr),
+        align(left + horizon)[#image(raw-image, format: "png", width: 100pt)],
+        align(right + horizon)[
+          #text(fill: gray, size: 9pt)[
+            Internal Document \
+            #datetime.today().display("[month repr:long] [day], [year]")
+          ]
+        ]
+      )
+      v(5pt)
+      line(length: 100%, stroke: 0.5pt + gray.lighten(50%))
+    }
+  }
 )
 
-== Revenue Distribution (Bar Chart)
+#set text(font: ("Roboto"), size: 11pt, weight: "light")
+#show heading: set text(fill: rgb("#4285F4"), weight: "regular")
 
+= Revenue Distribution
 #align(center)[
-  #block(stroke: 1pt + luma(200), inset: 10pt, radius: 4pt)[
+  #block(inset: 10pt, radius: 4pt)[
     #cetz.canvas({
-      let data = (
-        ("Tech", 25),
-        ("Retail", 18),
-        ("Health", 32),
-        ("Finance", 21),
-      )
-
+      let data = (("Tech", 25), ("Retail", 18), ("Health", 32), ("Finance", 21))
       chart.barchart(
         size: (12, 6),
         data,
         bar-width: 0.7,
+        bar-style: cetz.palette.new(colors:google-palette), 
         x-label: "Department",
         y-label: "Revenue (USD Millions)"
       )
@@ -191,26 +136,18 @@ const source = `
 
 #v(2em)
 
-== Market Share (Pie Chart)
-
 #align(center)[
- #block(stroke: 1pt + luma(200), inset: 10pt, radius: 4pt)[
+  #block(stroke: 1pt + luma(200), inset: 10pt, radius: 4pt)[
     #cetz.canvas({
-      // In 0.1.3, it is safest to pass data where the value is easily indexable
-      let pie-data = (
-        ("Tech", 25),
-        ("Retail", 18),
-        ("Health", 32),
-        ("Finance", 21),
-      )
-
+      let pie-data = (("Tech", 25), ("Retail", 18), ("Health", 32), ("Finance", 21))
       chart.piechart(
         pie-data,
-        value-key: 1,    // Use the 2nd item (index 1) as the value
-        label-key: 0,    // Use the 1st item (index 0) as the label
+        value-key: 1,
+        label-key: 0,
         radius: 2.5,
-        slice-style: (blue, red, green, yellow), // Optional: set custom colors
-        inner-label: (radius: 60%, content: (v, l) => text(white, weight: "bold")[#v%]),
+        // For piecharts, some versions use 'fill' in 'style' or 'slice-style'
+        slice-style: (google-palette),
+        inner-label: (radius: 60%, content: (v, l) => text(white, weight: "bold")[#v]),
         outer-label: (radius: 120%, content: (v, l) => l),
       )
     })
