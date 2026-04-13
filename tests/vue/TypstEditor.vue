@@ -69,7 +69,7 @@
 </template>
 
 <script>
-import init, { add_font, add_file, add_package_file, compile_to_pdf } from '../../src/wasm/my_typst_wasm.js';
+import init, { add_font, add_file, add_package_file, compile_to_pdf } from '../../pkg/my_typst_wasm.js';
 
 export default {
   name: 'TypstEditor',
