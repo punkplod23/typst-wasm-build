@@ -1,3 +1,9 @@
-1. Sort out the Cetz Loading and a real time error message.
-2. Consider how we can get more info on cetz and how they pmount there vfs.
-3. Seems to be TGZ calls to typst, contact typst.
+1. Make the fonts and the libs compile into wasm.
+2. Re-write and ditch wasm-bind-gen its not helping.
+3. Fix the go example, make the go example run off a different wasm output.
+4. Create a tokio based test for rust.
+5. Create a python implementation.
+6. Create a Kotlin implementation
+7. Consider AWS lambda implementaion.
+8. Write real documentaiton.
+9. Package it and send it across all network more errors the better.
